@@ -17,3 +17,7 @@
     "fs-extra": "^11.3.3"
   }
 }
+
+"scripts": {
+  "start": "node index.js"
+}
