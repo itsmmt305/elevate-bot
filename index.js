@@ -62,6 +62,21 @@ async function notifyMentionedUsers(message) {
   const memberRole = guild.roles.cache.find(r => r.name === "member");
   if (!memberRole) return;
 
+  // Prepare message content
+  let content = message.content?.trim();
+
+  // If message is empty but has attachment
+  if (!content && message.attachments.size > 0) {
+    content = "[Attachment sent]";
+  }
+
+  // Escape backticks to avoid breaking formatting
+  if (content) {
+    content = content.replace(/`/g, "'");
+  } else {
+    content = "[No text content]";
+  }
+
   for (const [, user] of message.mentions.users) {
 
     if (user.bot) continue;
@@ -70,15 +85,17 @@ async function notifyMentionedUsers(message) {
     try {
       const mentionedMember = await guild.members.fetch(user.id);
 
-      // only notify logged-out users
+      // Skip if user is logged in
       if (mentionedMember.roles.cache.has(memberRole.id)) continue;
 
       await user.send(
-        `📣 ${message.author.username} calls upon you in #${message.channel.name}`
+`📣 ${message.author.username} calls upon you in #${message.channel.name}
+
+\`${content}\``
       );
 
     } catch {
-      // user probably has DMs disabled
+      // DMs disabled — ignore
     }
   }
 }
