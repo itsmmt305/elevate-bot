@@ -8,8 +8,8 @@ async function sendLog(guild, message) {
 
     if (!logChannel) return;
 
-    const timestamp = new Date().toLocaleString();
-    await logChannel.send(`[${timestamp}] ${message}`);
+    await logChannel.send(message);
+
   } catch (err) {
     console.error("Logging failed:", err);
   }
