@@ -37,7 +37,7 @@ const activityTimers = new Map();
 async function sendLog(guild, message) {
   try {
     const logChannel = guild.channels.cache.find(
-      ch => ch.name === "🗒️-logs" && ch.isTextBased()
+      ch => ch.name === "logs" && ch.isTextBased()
     );
 
     if (!logChannel) return;
@@ -46,6 +46,40 @@ async function sendLog(guild, message) {
     await logChannel.send(`[${timestamp}] ${message}`);
   } catch (err) {
     console.error("Logging failed:", err);
+  }
+}
+
+
+
+/* =========================================================
+   MENTION NOTIFICATION SYSTEM
+========================================================= */
+
+async function notifyMentionedUsers(message) {
+  const guild = message.guild;
+  if (!guild) return;
+
+  const memberRole = guild.roles.cache.find(r => r.name === "member");
+  if (!memberRole) return;
+
+  for (const [, user] of message.mentions.users) {
+
+    if (user.bot) continue;
+    if (user.id === message.author.id) continue;
+
+    try {
+      const mentionedMember = await guild.members.fetch(user.id);
+
+      // only notify logged-out users
+      if (mentionedMember.roles.cache.has(memberRole.id)) continue;
+
+      await user.send(
+        `📣 ${message.author.username} calls upon you in #${message.channel.name}`
+      );
+
+    } catch {
+      // user probably has DMs disabled
+    }
   }
 }
 
@@ -64,8 +98,7 @@ async function getOrCreatePanel(channel) {
 
   if (panelData.messageId) {
     try {
-      const msg = await channel.messages.fetch(panelData.messageId);
-      return msg;
+      return await channel.messages.fetch(panelData.messageId);
     } catch {}
   }
 
@@ -122,12 +155,12 @@ client.once(Events.ClientReady, async (c) => {
 
 
 /* =========================================================
-   BUTTON + MODAL HANDLER
+   INTERACTIONS
 ========================================================= */
 
 client.on(Events.InteractionCreate, async interaction => {
 
-  /* ---------- SIGN IN BUTTON ---------- */
+  // Sign-in button
   if (interaction.isButton() && interaction.customId === 'open_login_modal') {
 
     const modal = new ModalBuilder()
@@ -145,13 +178,13 @@ client.on(Events.InteractionCreate, async interaction => {
     return;
   }
 
-  /* ---------- SIGN OUT BUTTON ---------- */
+  // Sign-out button
   if (interaction.isButton() && interaction.customId === 'logout_btn') {
     await manualLogout(interaction);
     return;
   }
 
-  /* ---------- PASSWORD SUBMIT ---------- */
+  // Password submission
   if (interaction.isModalSubmit() && interaction.customId === 'login_modal') {
 
     const entered = interaction.fields.getTextInputValue('password');
@@ -159,19 +192,11 @@ client.on(Events.InteractionCreate, async interaction => {
     const member = await guild.members.fetch(interaction.user.id);
     const memberRole = guild.roles.cache.find(r => r.name === "member");
 
-    if (!memberRole) {
-      return interaction.reply({
-        content: "Server configuration error: 'member' role missing.",
-        ephemeral: true
-      });
-    }
+    if (!memberRole)
+      return interaction.reply({ content: "Server configuration error.", ephemeral: true });
 
-    if (entered !== PASSWORD) {
-      return interaction.reply({
-        content: "❌ Incorrect password.",
-        ephemeral: true
-      });
-    }
+    if (entered !== PASSWORD)
+      return interaction.reply({ content: "❌ Incorrect password.", ephemeral: true });
 
     try {
       await member.roles.add(memberRole);
@@ -182,15 +207,11 @@ client.on(Events.InteractionCreate, async interaction => {
         ephemeral: true
       });
 
-      // LOG LOGIN
       await sendLog(guild, `🟢 **${interaction.user.tag}** logged in`);
 
     } catch (err) {
-      console.error("Role assignment failed:", err);
-      await interaction.reply({
-        content: "Login failed. Bot lacks permissions.",
-        ephemeral: true
-      });
+      console.error(err);
+      await interaction.reply({ content: "Login failed.", ephemeral: true });
     }
   }
 });
@@ -198,12 +219,15 @@ client.on(Events.InteractionCreate, async interaction => {
 
 
 /* =========================================================
-   ACTIVITY TRACKING
+   MESSAGE EVENTS (activity + mention notification)
 ========================================================= */
 
 client.on(Events.MessageCreate, async (message) => {
 
   if (!message.guild || message.author.bot) return;
+
+  // NEW FEATURE
+  await notifyMentionedUsers(message);
 
   const memberRole = message.guild.roles.cache.find(r => r.name === "member");
   if (!memberRole) return;
@@ -222,35 +246,21 @@ client.on(Events.MessageCreate, async (message) => {
 
 async function manualLogout(interaction) {
 
-  try {
-    const guild = interaction.guild;
-    const member = await guild.members.fetch(interaction.user.id);
-    const memberRole = guild.roles.cache.find(r => r.name === "member");
+  const guild = interaction.guild;
+  const member = await guild.members.fetch(interaction.user.id);
+  const memberRole = guild.roles.cache.find(r => r.name === "member");
 
-    if (memberRole && member.roles.cache.has(memberRole.id)) {
-      await member.roles.remove(memberRole);
-    }
+  if (memberRole && member.roles.cache.has(memberRole.id))
+    await member.roles.remove(memberRole);
 
-    if (activityTimers.has(member.id)) {
-      clearTimeout(activityTimers.get(member.id));
-      activityTimers.delete(member.id);
-    }
-
-    await interaction.reply({
-      content: "🔒 You have been logged out.",
-      ephemeral: true
-    });
-
-    // LOG MANUAL LOGOUT
-    await sendLog(guild, `🔒 **${interaction.user.tag}** logged out (manual)`);
-
-  } catch (err) {
-    console.error("Manual logout failed:", err);
-    await interaction.reply({
-      content: "Logout failed.",
-      ephemeral: true
-    });
+  if (activityTimers.has(member.id)) {
+    clearTimeout(activityTimers.get(member.id));
+    activityTimers.delete(member.id);
   }
+
+  await interaction.reply({ content: "🔒 You have been logged out.", ephemeral: true });
+
+  await sendLog(guild, `🔒 **${interaction.user.tag}** logged out (manual)`);
 }
 
 
@@ -261,30 +271,20 @@ async function manualLogout(interaction) {
 
 function startActivityTimer(member) {
 
-  if (activityTimers.has(member.id)) {
+  if (activityTimers.has(member.id))
     clearTimeout(activityTimers.get(member.id));
-  }
 
   const timer = setTimeout(async () => {
 
-    try {
-      const guild = member.guild;
-      const memberRole = guild.roles.cache.find(r => r.name === "member");
+    const guild = member.guild;
+    const memberRole = guild.roles.cache.find(r => r.name === "member");
 
-      if (memberRole && member.roles.cache.has(memberRole.id)) {
-        await member.roles.remove(memberRole);
-      }
+    if (memberRole && member.roles.cache.has(memberRole.id))
+      await member.roles.remove(memberRole);
 
-      try {
-        await member.send("🔒 Logged out due to inactivity.");
-      } catch {}
+    try { await member.send("🔒 Logged out due to inactivity."); } catch {}
 
-      // LOG INACTIVITY LOGOUT
-      await sendLog(guild, `⏰ **${member.user.tag}** logged out (inactivity)`);
-
-    } catch (err) {
-      console.error("Auto logout error:", err);
-    }
+    await sendLog(guild, `⏰ **${member.user.tag}** logged out (inactivity)`);
 
     activityTimers.delete(member.id);
 
