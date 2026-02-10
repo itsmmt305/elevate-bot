@@ -23,18 +23,31 @@ const client = new Client({
 });
 
 const PASSWORD = process.env.PASSWORD;
-
-/* ================= CHANGE TIMEOUT HERE =================
-   Example:
-   5 min  -> 5 * 60 * 1000
-   30 sec -> 30 * 1000
-   2 hrs  -> 2 * 60 * 60 * 1000
-*/
-const TIMEOUT = 60 * 60 * 1000; // 1 hour
-
+const TIMEOUT = 15 * 60 * 1000; // 15 minutes
 
 const PANEL_FILE = './panel.json';
 const activityTimers = new Map();
+
+
+
+/* =========================================================
+   LOGGING SYSTEM
+========================================================= */
+
+async function sendLog(guild, message) {
+  try {
+    const logChannel = guild.channels.cache.find(
+      ch => ch.name === "🗒️-logs" && ch.isTextBased()
+    );
+
+    if (!logChannel) return;
+
+    const timestamp = new Date().toLocaleString();
+    await logChannel.send(`[${timestamp}] ${message}`);
+  } catch (err) {
+    console.error("Logging failed:", err);
+  }
+}
 
 
 
@@ -49,7 +62,6 @@ async function getOrCreatePanel(channel) {
     panelData = JSON.parse(fs.readFileSync(PANEL_FILE));
   } catch {}
 
-  // try existing panel
   if (panelData.messageId) {
     try {
       const msg = await channel.messages.fetch(panelData.messageId);
@@ -57,7 +69,6 @@ async function getOrCreatePanel(channel) {
     } catch {}
   }
 
-  // create buttons
   const loginBtn = new ButtonBuilder()
     .setCustomId('open_login_modal')
     .setLabel('Sign In')
@@ -71,7 +82,7 @@ async function getOrCreatePanel(channel) {
   const row = new ActionRowBuilder().addComponents(loginBtn, logoutBtn);
 
   const msg = await channel.send({
-    content: "🔐 **Sign in to continue**\n‎ \n",
+    content: "🔐 **Welcome to Glory**\n‎ \n",
     components: [row]
   });
 
@@ -95,7 +106,7 @@ client.once(Events.ClientReady, async (c) => {
       const guild = await g.fetch();
 
       const channel = guild.channels.cache.find(
-        ch => ch.name === "🔐-sign-in" && ch.isTextBased()
+        ch => ch.name === "🔐-access" && ch.isTextBased()
       );
 
       if (!channel) return;
@@ -140,7 +151,6 @@ client.on(Events.InteractionCreate, async interaction => {
     return;
   }
 
-
   /* ---------- PASSWORD SUBMIT ---------- */
   if (interaction.isModalSubmit() && interaction.customId === 'login_modal') {
 
@@ -171,6 +181,9 @@ client.on(Events.InteractionCreate, async interaction => {
         content: `🟢 ${interaction.user.username} is logged in`,
         ephemeral: true
       });
+
+      // LOG LOGIN
+      await sendLog(guild, `🟢 **${interaction.user.tag}** logged in`);
 
     } catch (err) {
       console.error("Role assignment failed:", err);
@@ -228,6 +241,9 @@ async function manualLogout(interaction) {
       ephemeral: true
     });
 
+    // LOG MANUAL LOGOUT
+    await sendLog(guild, `🔒 **${interaction.user.tag}** logged out (manual)`);
+
   } catch (err) {
     console.error("Manual logout failed:", err);
     await interaction.reply({
@@ -263,6 +279,9 @@ function startActivityTimer(member) {
         await member.send("🔒 Logged out due to inactivity.");
       } catch {}
 
+      // LOG INACTIVITY LOGOUT
+      await sendLog(guild, `⏰ **${member.user.tag}** logged out (inactivity)`);
+
     } catch (err) {
       console.error("Auto logout error:", err);
     }
@@ -273,6 +292,5 @@ function startActivityTimer(member) {
 
   activityTimers.set(member.id, timer);
 }
-
 
 client.login(process.env.TOKEN);
