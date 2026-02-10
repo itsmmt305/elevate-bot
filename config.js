@@ -6,5 +6,5 @@ module.exports = {
   LOG_CHANNEL: "🗒️-logs",
   MEMBER_ROLE: "member",
   PANEL_FILE: "./panel.json",
-  TIMEOUT: 15 * 60 * 1000, // 15 minutes
+  TIMEOUT: 15 * 60 * 1000, // 15 minutes -> in milliseconds
 };

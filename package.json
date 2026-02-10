@@ -4,20 +4,17 @@
   "description": "Discord gated access bot",
   "main": "index.js",
   "type": "commonjs",
-
   "scripts": {
     "start": "node index.js"
   },
-
   "engines": {
     "node": ">=18"
   },
-
   "keywords": [],
   "author": "",
   "license": "ISC",
-
   "dependencies": {
+    "@upstash/redis": "^1.36.2",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.4",
     "fs-extra": "^11.3.3"
