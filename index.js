@@ -70,12 +70,22 @@ async function notifyMentionedUsers(message) {
     content = "[Attachment sent]";
   }
 
-  // Escape backticks to avoid breaking formatting
-  if (content) {
-    content = content.replace(/`/g, "'");
-  } else {
-    content = "[No text content]";
-  }
+  // Replace user mention tokens with usernames
+if (content) {
+
+  // Replace <@123> and <@!123>
+  content = content.replace(/<@!?(\d+)>/g, (match, id) => {
+    const user = message.client.users.cache.get(id);
+    if (user) return `@${user.username}`;
+    return "@unknown-user";
+  });
+
+  // Escape backticks to keep formatting safe
+  content = content.replace(/`/g, "'");
+
+} else {
+  content = "[No text content]";
+}
 
   for (const [, user] of message.mentions.users) {
 
