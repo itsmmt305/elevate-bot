@@ -1,4 +1,5 @@
 const { addTask, getTasks, removeTask } = require('../utils/taskStorage');
+const { getScore, resetUser } = require('../utils/scoreStorage');
 
 async function handleTaskCommand(message) {
 
@@ -18,17 +19,56 @@ async function handleTaskCommand(message) {
   /* ---------------- PULL ---------------- */
   if (command === "pull") {
 
+    let target = message.mentions.users.first() || message.author;
+    const userId = target.id;
+
     const tasks = await getTasks(userId);
-    if (tasks.length === 0)
-      return message.reply("No tasks today.");
+    const score = await getScore(userId);
 
-    let list = `**${message.author.username}'s Tasks**\n`;
-    tasks.forEach((t, i) => {
-      list += `${i + 1}. ${t}\n`;
-    });
+    let list = `📋 **${target.username}'s Tasks**\n`;
+    list += `⭐ Score: **${score}**\n\n`;
 
-    return message.reply(list);
-  }
+    if (tasks.length === 0) {
+        list += "_No tasks recorded today._";
+    } else {
+        tasks.forEach((t, i) => {
+        list += `${i + 1}. ${t}\n`;
+        });
+    }
+
+    await message.reply(list);
+
+    /* ACCOUNTABILITY CHECK */
+    if (target.id !== message.author.id) {
+        try {
+        const member = await message.guild.members.fetch(target.id);
+
+        const memberRole = message.guild.roles.cache.find(r => r.name === "member");
+
+        if (!member.roles.cache.has(memberRole.id)) {
+            await target.send("🚨 ACCOUNTABILITY CHECK");
+        }
+
+        } catch {}
+    }
+
+    return;
+    }
+
+    /* ---------------- RESET USER ---------------- */
+    if (command === "reset") {
+
+    if (!message.member.permissions.has("Administrator"))
+        return message.reply("You are not authorized.");
+
+    const target = message.mentions.users.first();
+    if (!target)
+        return message.reply("Mention a user to reset.");
+
+    await resetUser(target.id);
+
+    return message.reply(`Stats reset for ${target.username}.`);
+    }
 
   /* ---------------- REMOVE ---------------- */
   if (command === "rm") {

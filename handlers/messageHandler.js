@@ -15,7 +15,7 @@ async function handleMessage(message) {
   const isAccessChannel = message.channel.name === config.ACCESS_CHANNEL;
 
   // COMMAND CHANNEL ONLY
-if (message.channel.name === config.COMMAND_CHANNEL && message.content.startsWith("!")) {
+if (message.content.startsWith("!")) {
   await taskCmd.handleTaskCommand(message);
   return;
 }
