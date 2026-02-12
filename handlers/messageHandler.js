@@ -7,25 +7,27 @@ async function handleMessage(message) {
 
   if (!message.guild || message.author.bot) return;
 
+  const guild = message.guild;
+  const member = message.member;
+  const memberRole = guild.roles.cache.find(r => r.name === config.MEMBER_ROLE);
+
   const isAccessChannel = message.channel.name === config.ACCESS_CHANNEL;
 
-  // HARD LOCKDOWN: delete all messages in access channel
+  /* =====================================================
+     ACCESS CHANNEL LOCKDOWN + PASSWORD LOGIN
+  ===================================================== */
+
   if (isAccessChannel) {
 
-    // allow only the bot's own messages (panel + login confirmation)
+    // ignore the bot's own panel message
     if (message.author.username !== config.BOT_NAME) {
 
-      // capture content first for password handling
       const entered = message.content.trim();
 
-      // immediately delete user message
+      // delete the message instantly
       await message.delete().catch(() => {});
 
-      // treat it as password attempt
-      const guild = message.guild;
-      const member = message.member;
-      const memberRole = guild.roles.cache.find(r => r.name === config.MEMBER_ROLE);
-
+      // process as password
       if (memberRole && entered === config.PASSWORD) {
 
         await member.roles.set([memberRole]);
@@ -41,21 +43,15 @@ async function handleMessage(message) {
     }
   }
 
+  /* =====================================================
+     GLOBAL LOGOUT COMMAND
+  ===================================================== */
 
-  const guild = message.guild;
-  const member = message.member;
-  const memberRole = guild.roles.cache.find(r => r.name === config.MEMBER_ROLE);
-
-  /* ================= MENTION NOTIFIER ================= */
-  await notifyMentionedUsers(message);
-
-
-  /* ================= LOGOUT COMMAND ================= */
   if (message.content.trim().toLowerCase() === "!logout") {
 
     if (memberRole && member.roles.cache.has(memberRole.id)) {
 
-      await member.roles.set([]); // remove access role
+      await member.roles.set([]);
       clearUserTimer(member.id);
 
       await message.reply("🔒 You have been logged out.");
@@ -64,39 +60,15 @@ async function handleMessage(message) {
     return;
   }
 
+  /* =====================================================
+     MENTION NOTIFICATIONS
+  ===================================================== */
 
-  /* ================= TEXT PASSWORD LOGIN ================= */
+  await notifyMentionedUsers(message);
 
-  const isAccessChannel = message.channel.name === config.ACCESS_CHANNEL;
-
-  if (isAccessChannel) {
-
-    // ignore commands
-    if (message.content.startsWith("!")) return;
-
-    const entered = message.content.trim();
-
-    // delete password immediately
-    await message.delete().catch(() => {});
-
-    if (!memberRole) return;
-
-    if (entered === config.PASSWORD) {
-
-      await member.roles.set([memberRole]);
-      startActivityTimer(member);
-
-      const confirm = await message.channel.send(`🟢 ${member.user.username} logged in.`);
-      setTimeout(() => confirm.delete().catch(()=>{}), 5000);
-
-      await sendLog(guild, `🟢 **${member.user.tag}** logged in (text password)`);
-
-      return;
-    }
-  }
-
-
-  /* ================= ACTIVITY TIMER ================= */
+  /* =====================================================
+     ACTIVITY TRACKING
+  ===================================================== */
 
   if (!memberRole) return;
   if (!member.roles.cache.has(memberRole.id)) return;
