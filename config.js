@@ -7,4 +7,5 @@ module.exports = {
   MEMBER_ROLE: "member",
   PANEL_FILE: "./panel.json",
   TIMEOUT: 15 * 60 * 1000, // 15 minutes -> in milliseconds
+  BOT_NAME: "elevate#5504"
 };

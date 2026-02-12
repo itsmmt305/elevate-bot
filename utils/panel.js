@@ -71,7 +71,10 @@ async function getOrCreatePanel(channel) {
 
   // 3) Send panel message
   const newPanel = await channel.send({
-    content: "🔐 **Welcome to Glory**\n‎ \n",
+  content:
+  "# GLORIOUS PURPOSE\n" +
+  "Use the **Sign In** button OR type your password here.\n" +
+  "To leave session anytime: `!logout`\n‎\n",
     components: [row]
   });
 
@@ -79,6 +82,21 @@ async function getOrCreatePanel(channel) {
   await savePanelId(guildId, newPanel.id);
 
   console.log(`Panel created and saved for guild ${guildId}`);
+
+  // CLEAN CHANNEL HISTORY (leave only panel message)
+  try {
+    const messages = await channel.messages.fetch({ limit: 100 });
+
+    const toDelete = messages.filter(msg =>
+      msg.id !== newPanel.id && !msg.pinned
+    );
+
+    if (toDelete.size > 0)
+      await channel.bulkDelete(toDelete, true);
+
+  } catch (err) {
+    console.log("History cleanup failed:", err.message);
+  }
 
   return newPanel;
 }
