@@ -17,6 +17,7 @@
     "@upstash/redis": "^1.36.2",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.4",
-    "fs-extra": "^11.3.3"
+    "fs-extra": "^11.3.3",
+    "node-cron": "^4.2.1"
   }
 }

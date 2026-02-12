@@ -2,6 +2,7 @@ const config = require('../config');
 const { startActivityTimer, clearUserTimer } = require('./activityManager');
 const { notifyMentionedUsers } = require('./mentionNotifier');
 const { sendLog } = require('../utils/logger');
+const taskCmd = require('../tasks/tasksCommands');
 
 async function handleMessage(message) {
 
@@ -12,6 +13,13 @@ async function handleMessage(message) {
   const memberRole = guild.roles.cache.find(r => r.name === config.MEMBER_ROLE);
 
   const isAccessChannel = message.channel.name === config.ACCESS_CHANNEL;
+
+  // COMMAND CHANNEL ONLY
+if (message.channel.name === config.COMMAND_CHANNEL && message.content.startsWith("!")) {
+  await taskCmd.handleTaskCommand(message);
+  return;
+}
+
 
   /* =====================================================
      ACCESS CHANNEL LOCKDOWN + PASSWORD LOGIN
