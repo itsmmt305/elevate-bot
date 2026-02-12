@@ -1,4 +1,4 @@
-const { addTask, getTasks, removeTask } = require('../utils/taskStorage');
+const { addTask, getTasks, removeTask, completeTask } = require('../utils/taskStorage');
 const { getScore, resetUser } = require('../utils/scoreStorage');
 
 async function handleTaskCommand(message) {
@@ -32,8 +32,16 @@ async function handleTaskCommand(message) {
         list += "_No tasks recorded today._";
     } else {
         tasks.forEach((t, i) => {
-        list += `${i + 1}. ${t}\n`;
+
+        if (typeof t === "string") {
+            list += `${i + 1}. ${t}\n`;
+            return;
+        }
+
+        const mark = t.done ? "✅ " : "";
+        list += `${i + 1}. ${mark}${t.text}\n`;
         });
+
     }
 
     await message.reply(list);
@@ -54,6 +62,23 @@ async function handleTaskCommand(message) {
 
     return;
     }
+
+      /* ---------------- PUSH (COMPLETE TASK) ---------------- */
+  if (command === "push") {
+
+    const index = parseInt(args[0]) - 1;
+
+    if (isNaN(index))
+      return message.reply("Provide a valid task number.");
+
+    const success = await completeTask(userId, index);
+
+    if (!success)
+      return message.reply("Task not found.");
+
+    return message.reply("✅ Task marked complete.");
+  }
+
 
     /* ---------------- RESET USER ---------------- */
     if (command === "reset") {

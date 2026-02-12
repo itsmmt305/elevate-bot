@@ -30,6 +30,25 @@ async function removeTask(userId, index) {
   await saveTasks(userId, tasks);
 }
 
+async function completeTask(userId, index) {
+
+  const tasks = await getTasks(userId);
+
+  if (!tasks || index < 0 || index >= tasks.length) return false;
+
+  // convert legacy string tasks into objects if needed
+  if (typeof tasks[index] === "string") {
+    tasks[index] = { text: tasks[index], done: false };
+  }
+
+  tasks[index].done = true;
+
+  await saveTasks(userId, tasks);
+  return true;
+}
+
+module.exports.completeTask = completeTask;
+
 module.exports = {
   getTasks,
   addTask,
