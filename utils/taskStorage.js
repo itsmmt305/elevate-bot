@@ -6,36 +6,24 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
-function tasksKey(userId) {
+function taskKey(userId) {
   return `tasks:${userId}:${getISTDateKey()}`;
 }
 
-/* ---------------- GET TASKS ---------------- */
+/* ---------------- LOAD ---------------- */
 async function getTasks(userId) {
-
-  let tasks = await redis.get(tasksKey(userId));
-
-  if (!tasks) return [];
-
-  // migrate old string tasks -> object tasks
-  tasks = tasks.map(t => {
-    if (typeof t === "string") {
-      return { text: t, done: false };
-    }
-    return t;
-  });
-
-  return tasks;
+  const data = await redis.get(taskKey(userId));
+  if (!data) return [];
+  return data;
 }
 
-/* ---------------- SAVE TASKS ---------------- */
+/* ---------------- SAVE ---------------- */
 async function saveTasks(userId, tasks) {
-  await redis.set(tasksKey(userId), tasks);
+  await redis.set(taskKey(userId), tasks);
 }
 
-/* ---------------- ADD TASK ---------------- */
+/* ---------------- ADD ---------------- */
 async function addTask(userId, text) {
-
   const tasks = await getTasks(userId);
 
   tasks.push({
@@ -46,9 +34,8 @@ async function addTask(userId, text) {
   await saveTasks(userId, tasks);
 }
 
-/* ---------------- REMOVE TASK ---------------- */
+/* ---------------- REMOVE ---------------- */
 async function removeTask(userId, index) {
-
   const tasks = await getTasks(userId);
 
   if (index < 0 || index >= tasks.length) return false;
@@ -59,9 +46,8 @@ async function removeTask(userId, index) {
   return true;
 }
 
-/* ---------------- COMPLETE TASK ---------------- */
+/* ---------------- COMPLETE ---------------- */
 async function completeTask(userId, index) {
-
   const tasks = await getTasks(userId);
 
   if (index < 0 || index >= tasks.length) return false;
@@ -76,6 +62,5 @@ module.exports = {
   addTask,
   getTasks,
   removeTask,
-  completeTask,
-  saveTasks
+  completeTask
 };
