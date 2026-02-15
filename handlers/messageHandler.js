@@ -14,11 +14,34 @@ async function handleMessage(message) {
 
   const isAccessChannel = message.channel.name === config.ACCESS_CHANNEL;
 
+  /* =====================================================
+     GLOBAL LOGOUT COMMAND (PRIORITY)
+  ===================================================== */
+
+  if (message.content.trim().toLowerCase() === "!logout") {
+
+    // Delete the command message instantly for cleanliness
+    await message.delete().catch(() => { });
+
+    if (memberRole && member.roles.cache.has(memberRole.id)) {
+
+      await member.roles.set([]);
+      clearUserTimer(member.id);
+
+      // Send a temporary confirmation
+      const reply = await message.channel.send("🔒 You have been logged out.");
+      setTimeout(() => reply.delete().catch(() => { }), 5000);
+
+      await sendLog(guild, `🔒 **${member.user.tag}** logged out (command)`);
+    }
+    return;
+  }
+
   // COMMAND CHANNEL ONLY
-if (message.content.startsWith("!")) {
-  await taskCmd.handleTaskCommand(message);
-  return;
-}
+  if (message.content.startsWith("!")) {
+    await taskCmd.handleTaskCommand(message);
+    return;
+  }
 
 
   /* =====================================================
@@ -33,7 +56,7 @@ if (message.content.startsWith("!")) {
       const entered = message.content.trim();
 
       // delete the message instantly
-      await message.delete().catch(() => {});
+      await message.delete().catch(() => { });
 
       // process as password
       if (memberRole && entered === config.PASSWORD) {
@@ -42,7 +65,7 @@ if (message.content.startsWith("!")) {
         startActivityTimer(member);
 
         const confirm = await message.channel.send(`🟢 ${member.user.username} logged in.`);
-        setTimeout(() => confirm.delete().catch(()=>{}), 5000);
+        setTimeout(() => confirm.delete().catch(() => { }), 5000);
 
         await sendLog(guild, `🟢 **${member.user.tag}** logged in (text password)`);
       }
@@ -51,22 +74,6 @@ if (message.content.startsWith("!")) {
     }
   }
 
-  /* =====================================================
-     GLOBAL LOGOUT COMMAND
-  ===================================================== */
-
-  if (message.content.trim().toLowerCase() === "!logout") {
-
-    if (memberRole && member.roles.cache.has(memberRole.id)) {
-
-      await member.roles.set([]);
-      clearUserTimer(member.id);
-
-      await message.reply("🔒 You have been logged out.");
-      await sendLog(guild, `🔒 **${member.user.tag}** logged out (command)`);
-    }
-    return;
-  }
 
   /* =====================================================
      MENTION NOTIFICATIONS
