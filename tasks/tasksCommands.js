@@ -1,4 +1,4 @@
-const { addTask, getTasks, removeTask, completeTask, startStashTask, getStashedTasks } = require('../utils/taskStorage');
+const { addTask, getTasks, removeTask, completeTask, startStashTask, getStashedTasks, revertTask, dropStash } = require('../utils/taskStorage');
 const { Redis } = require("@upstash/redis");
 const { getScore, getStreak, resetUser, setStreak, setScore } = require('../utils/scoreStorage'); // Ensure setScore/setStreak exported if needed for hard reset (resetUser handles generic, but let's see)
 const { processDailyStats, isCheckedOut } = require('../utils/statsProcessor');
@@ -57,8 +57,26 @@ async function handleTaskCommand(message) {
     return message.reply("✅ Task marked complete.");
   }
 
+  /* REVERT */
+  if (command === "revert") {
+    const index = parseInt(args[0]) - 1;
+    if (isNaN(index)) return message.reply("Provide a valid task number.");
+
+    const success = await revertTask(userId, index);
+    if (!success) return message.reply("Task not found.");
+
+    return message.reply("Task marked as incomplete.");
+  }
+
   /* STASH */
   if (command === "stash") {
+
+    if (args.includes("--drop")) {
+      const droppedCount = await dropStash(userId);
+      if (droppedCount === 0) return message.reply("Stash is empty.");
+      return message.reply(`📦 Moved ${droppedCount} items from stash to your main list.`);
+    }
+
     const index = parseInt(args[0]) - 1;
     if (isNaN(index)) return message.reply("Provide a valid task number.");
 

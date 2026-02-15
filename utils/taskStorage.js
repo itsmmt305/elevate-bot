@@ -93,6 +93,37 @@ async function completeTask(userId, index) {
   return true;
 }
 
+/* ---------------- REVERT ---------------- */
+async function revertTask(userId, index) {
+  const tasks = await getTasks(userId);
+
+  if (index < 0 || index >= tasks.length) return false;
+
+  tasks[index].done = false;
+
+  await saveTasks(userId, tasks);
+  return true;
+}
+
+/* ---------------- DROP STASH ---------------- */
+async function dropStash(userId) {
+  const stash = await getStashedTasks(userId);
+  if (stash.length === 0) return 0;
+
+  const tasks = await getTasks(userId);
+
+  for (const t of stash) {
+    tasks.push(t);
+  }
+
+  await saveTasks(userId, tasks);
+
+  // Clear stash
+  await redis.del(stashKey(userId));
+
+  return stash.length;
+}
+
 module.exports = {
   addTask,
   getTasks,
@@ -100,5 +131,7 @@ module.exports = {
   completeTask,
   getStashedTasks,
   startStashTask,
-  popStashedTasks
+  popStashedTasks,
+  revertTask,
+  dropStash
 };
