@@ -72,7 +72,7 @@ async function processDailyStats(guild, user, tasks, dateKey) {
             msg += "**Tasks:**\n";
             tasks.forEach((t, i) => {
                 const icon = t.done ? "✅" : "⬜";
-                msg += `${i + 1}. ${icon} ${t.text}\n`;
+                msg += `${i + 1}. ${t.text} ${icon}\n`;
             });
         } else {
             msg += "_No tasks tracked today._";
