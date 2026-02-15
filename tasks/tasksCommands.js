@@ -1,5 +1,7 @@
 const { addTask, getTasks, removeTask, completeTask } = require('../utils/taskStorage');
 const { getScore, getStreak, resetUser } = require('../utils/scoreStorage');
+const { processDailyStats, isCheckedOut } = require('../utils/statsProcessor');
+const { getISTDateKey } = require('../utils/dateHelper');
 
 async function handleTaskCommand(message) {
 
@@ -7,9 +9,34 @@ async function handleTaskCommand(message) {
 
   const [command, ...args] = message.content.slice(1).split(" ");
   const userId = message.author.id;
+  const guild = message.guild;
+
+  /* CHECKOUT */
+  if (command === "checkout") {
+    const dateKey = getISTDateKey();
+
+    // Check if already checked out
+    if (await isCheckedOut(userId, dateKey)) {
+      return message.reply("⚠️ You have already checked out for today.");
+    }
+
+    const tasks = await getTasks(userId);
+
+    // Process stats (updates streak, sends summary)
+    // We pass the guild object so it can find the channel
+    const stats = await processDailyStats(guild, message.author, tasks, dateKey);
+
+    return message.reply(`✅ Checkout complete! Streak: **${stats.currentStreak}**. See summary in session-progress.`);
+  }
 
   /* COMMIT */
   if (command === "commit") {
+    const dateKey = getISTDateKey();
+
+    if (await isCheckedOut(userId, dateKey)) {
+      return message.reply("Take some rest, come back tomorrow.");
+    }
+
     const text = args.join(" ");
     if (!text) return message.reply("Provide a task.");
 

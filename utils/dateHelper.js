@@ -6,8 +6,8 @@ function getISTDateKey() {
     now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
   );
 
-  // before 5am -> belongs to previous day
-  if (ist.getHours() < 5) {
+  // before 7am -> belongs to previous day
+  if (ist.getHours() < 7) {
     ist.setDate(ist.getDate() - 1);
   }
 

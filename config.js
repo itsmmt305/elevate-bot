@@ -9,5 +9,6 @@ module.exports = {
   TIMEOUT: 15 * 60 * 1000, // 15 minutes -> in milliseconds
   BOT_NAME: "elevate#5504",
   COMMAND_CHANNEL: "🤖-bot-commands",
-  GRILL_CHANNEL: "🚨-grilling-area"
+  GRILL_CHANNEL: "🚨-grilling-area",
+  SESSION_PROGRESS_CHANNEL: "✅-session-progress"
 };

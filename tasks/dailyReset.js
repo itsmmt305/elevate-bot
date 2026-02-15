@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const { Redis } = require("@upstash/redis");
 const { getISTDateKey } = require('../utils/dateHelper');
-const { incrementStreak, resetStreak } = require('../utils/scoreStorage');
+const { processDailyStats } = require('../utils/statsProcessor');
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -9,38 +9,89 @@ const redis = new Redis({
 });
 
 /*
-Runs every day at 5:00 AM IST
+Runs every day at 7:00 AM IST
 */
-cron.schedule('0 5 * * *', async () => {
+function startDailyReset(client) {
+  cron.schedule('0 7 * * *', async () => {
 
-  console.log("DAILY RESET RUNNING");
+    console.log("DAILY RESET RUNNING");
 
-  const today = getISTDateKey();
+    // We need to process the *previous* logical day.
+    // Since getISTDateKey() now cuts off at 7am, calling it at 7:00:01 AM returns "Today".
+    // We want the key for "Yesterday".
 
-  // find all users who had task keys
-  const keys = await redis.keys(`tasks:*:${today}`);
+    const now = new Date();
+    const ist = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    ist.setDate(ist.getDate() - 1); // Go back 24h (roughly) or just 1 day
+    const yesterday = ist.toISOString().split("T")[0];
 
-  for (const key of keys) {
+    console.log(`Processing reset for date key: ${yesterday}`);
 
-    const parts = key.split(":");
-    const userId = parts[1];
+    // find all users who had task keys for yesterday
+    const keys = await redis.keys(`tasks:*:${yesterday}`);
 
-    const tasks = await redis.get(key) || [];
+    for (const key of keys) {
 
-    if (tasks.length === 0) {
-      await resetStreak(userId);
-      console.log(`Streak broken for ${userId}`);
-    } else {
-      await incrementStreak(userId);
-      console.log(`Streak increased for ${userId}`);
+      const parts = key.split(":");
+      const userId = parts[1];
+
+      try {
+        // Check if user already checked out
+        const checkoutKey = `checkout:${userId}:${yesterday}`;
+        const isCheckedOut = await redis.get(checkoutKey);
+
+        if (isCheckedOut) {
+          console.log(`User ${userId} already checked out. Clearing data.`);
+          // Just clear the data
+          await redis.del(key);
+          await redis.del(checkoutKey);
+        } else {
+          console.log(`User ${userId} did NOT check out. Auto-processing.`);
+
+          // Fetch necessary data
+          const tasks = await redis.get(key) || [];
+
+          // Try to find user and guild to report
+          // We'll iterate guilds to find where the user is present and where the channel exists
+          let user = null;
+          try {
+            user = await client.users.fetch(userId);
+          } catch (e) {
+            console.error(`Could not fetch user ${userId}:`, e.message);
+            continue;
+          }
+
+          // We assume the bot might be in multiple guilds, but we only need to post in one?
+          // Or all common guilds? Let's try to post in any guild that has the stats channel.
+          for (const guild of client.guilds.cache.values()) {
+            try {
+              const member = await guild.members.fetch(userId).catch(() => null);
+              if (member) {
+                await processDailyStats(guild, user, tasks, yesterday);
+                // If we assume one main server, we could break here.
+                // But to be safe, we can continue or break. 
+                // Let's break to avoid duplicate spam if they are in multiple servers with the bot.
+                break;
+              }
+            } catch (err) {
+              console.error(`Error processing guild ${guild.id} for user ${userId}`, err);
+            }
+          }
+
+          // Clear tasks
+          await redis.del(key);
+        }
+
+      } catch (err) {
+        console.error(`Error processing reset for ${userId}:`, err);
+      }
     }
 
-    // clear tasks for next day
-    await redis.del(key);
-  }
+    console.log("DAILY RESET COMPLETE");
 
-  console.log("DAILY RESET COMPLETE");
+  }, {
+    timezone: "Asia/Kolkata"
+  });
+}
 
-}, {
-  timezone: "Asia/Kolkata"
-});
+module.exports = { startDailyReset };

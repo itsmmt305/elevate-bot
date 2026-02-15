@@ -3,7 +3,7 @@ const config = require('./config');
 const { getOrCreatePanel } = require('./utils/panel');
 const { handleInteraction } = require('./handlers/interactionHandler');
 const { handleMessage } = require('./handlers/messageHandler');
-require('./tasks/dailyReset');
+const { startDailyReset } = require('./tasks/dailyReset');
 
 
 const client = new Client({
@@ -31,6 +31,8 @@ client.once(Events.ClientReady, async (c) => {
 
     await getOrCreatePanel(channel);
   });
+
+  startDailyReset(client);
 });
 
 client.on(Events.InteractionCreate, handleInteraction);
