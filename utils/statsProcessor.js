@@ -23,9 +23,6 @@ async function processDailyStats(guild, user, tasks, dateKey) {
 
     // 2. Update Streak & Score
     // Streak logic: Increment ONLY if at least one task is completed.
-    // Otherwise, if they had tasks but didn't correct any, reset streak.
-    // NOTE: If they had NO tasks at all, we generally might strictly reset or ignore. 
-    // Based on "streak is incremented only if there is a completed task... else it is set to zero"
 
     if (completed > 0) {
         await incrementStreak(user.id);
@@ -34,8 +31,28 @@ async function processDailyStats(guild, user, tasks, dateKey) {
         await resetStreak(user.id);
     }
 
+    // Scoring Logic
+    // +20 for each completed (fresh)
+    // +10 for each completed (stashed)
+    // -5 for each uncompleted
+
+    let dailyScoreChange = 0;
+
+    tasks.forEach(t => {
+        if (t.done) {
+            if (t.stashed) dailyScoreChange += 10;
+            else dailyScoreChange += 20;
+        } else {
+            dailyScoreChange -= 5;
+        }
+    });
+
+    // Get current score and apply change
+    let currentScore = await getScore(user.id);
+    currentScore += dailyScoreChange;
+    await setScore(user.id, currentScore);
+
     const currentStreak = await getStreak(user.id);
-    const currentScore = await getScore(user.id); // Assuming score might be updated elsewhere or we keep it as is
 
     // 3. Mark as checked out
     await redis.set(getCheckoutKey(user.id, dateKey), "true");

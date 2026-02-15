@@ -1,7 +1,8 @@
-const { addTask, getTasks, removeTask, completeTask } = require('../utils/taskStorage');
-const { getScore, getStreak, resetUser } = require('../utils/scoreStorage');
+const { addTask, getTasks, removeTask, completeTask, startStashTask, getStashedTasks } = require('../utils/taskStorage');
+const { getScore, getStreak, resetUser, setStreak, setScore } = require('../utils/scoreStorage'); // Ensure setScore/setStreak exported if needed for hard reset (resetUser handles generic, but let's see)
 const { processDailyStats, isCheckedOut } = require('../utils/statsProcessor');
 const { getISTDateKey } = require('../utils/dateHelper');
+const { Redis } = require("@upstash/redis"); // Needed for checking out reset? Or just use helper functions
 
 async function handleTaskCommand(message) {
 
@@ -23,7 +24,6 @@ async function handleTaskCommand(message) {
     const tasks = await getTasks(userId);
 
     // Process stats (updates streak, sends summary)
-    // We pass the guild object so it can find the channel
     const stats = await processDailyStats(guild, message.author, tasks, dateKey);
 
     return message.reply(`✅ Checkout complete! Streak: **${stats.currentStreak}**. See summary in session-progress.`);
@@ -56,6 +56,17 @@ async function handleTaskCommand(message) {
     return message.reply("✅ Task marked complete.");
   }
 
+  /* STASH */
+  if (command === "stash") {
+    const index = parseInt(args[0]) - 1;
+    if (isNaN(index)) return message.reply("Provide a valid task number.");
+
+    const success = await startStashTask(userId, index);
+    if (!success) return message.reply("Task not found.");
+
+    return message.reply("📦 Task stashed for tomorrow.");
+  }
+
   /* REMOVE */
   if (command === "rm") {
 
@@ -75,6 +86,7 @@ async function handleTaskCommand(message) {
     const targetId = target.id;
 
     const tasks = await getTasks(targetId);
+    const stashed = await getStashedTasks(targetId);
     const score = await getScore(targetId);
     const streak = await getStreak(targetId);
 
@@ -83,11 +95,19 @@ async function handleTaskCommand(message) {
     list += `🔥 Streak: **${streak} days**\n\n`;
 
     if (tasks.length === 0) {
-      list += "_No tasks recorded today._";
+      list += "_No tasks recorded today._\n";
     } else {
       tasks.forEach((t, i) => {
         const mark = t.done ? " ✅" : "";
-        list += `${i + 1}. ${t.text}${mark}\n`;
+        const origin = t.stashed ? " ↩️" : ""; // Symbol indicating carried over
+        list += `${i + 1}. ${t.text}${mark}${origin}\n`;
+      });
+    }
+
+    if (stashed.length > 0) {
+      list += `\n📦 **Stashed (Up Next):**\n`;
+      stashed.forEach((t, i) => {
+        list += `• ${t.text}\n`;
       });
     }
 
@@ -105,8 +125,37 @@ async function handleTaskCommand(message) {
     if (!target)
       return message.reply("Mention a user to reset.");
 
-    await resetUser(target.id);
-    return message.reply(`Stats reset for ${target.username}.`);
+    const isHard = args.includes("--hard");
+    const isSoft = args.includes("--soft");
+
+    if (isHard) {
+      // Full wipe
+      await resetUser(target.id);
+      const redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      });
+      // Also clear any stash
+      await redis.del(`stash:${target.id}`);
+      // Also clear checkout flag for today
+      const dateKey = getISTDateKey();
+      await redis.del(`checkout:${target.id}:${dateKey}`);
+
+      return message.reply(`☢️ HARD reset complete for ${target.username}.`);
+    } else if (isSoft) {
+      // Daily reset only (tasks + checkout)
+      const dateKey = getISTDateKey();
+      const redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      });
+      await redis.del(`tasks:${target.id}:${dateKey}`);
+      await redis.del(`checkout:${target.id}:${dateKey}`);
+
+      return message.reply(`🧹 SOFT reset (today only) complete for ${target.username}.`);
+    } else {
+      return message.reply("Please specify `--hard` (full wipe) or `--soft` (today's tasks only).");
+    }
   }
 }
 

@@ -87,6 +87,35 @@ function startDailyReset(client) {
       }
     }
 
+    // PART 2: PROCESS STASHED TASKS (Bring them to Today)
+    const today = getISTDateKey(); // This is now 7am+ -> Today
+    const stashKeys = await redis.keys("stash:*");
+
+    for (const sKey of stashKeys) {
+      const userId = sKey.split(":")[1];
+      const stash = await redis.get(sKey);
+
+      if (stash && stash.length > 0) {
+        console.log(`Unstashing ${stash.length} tasks for ${userId}`);
+
+        // Get current tasks (should be empty if reset just happened, but just in case)
+        const currentTasksKey = `tasks:${userId}:${today}`;
+        const currentTasks = await redis.get(currentTasksKey) || [];
+
+        // Add stashed tasks with stashed=true flag
+        stash.forEach(t => {
+          t.stashed = true; // Mark as carried over
+          t.done = false;   // Ensure they are not done
+          currentTasks.push(t);
+        });
+
+        await redis.set(currentTasksKey, currentTasks);
+
+        // Clear stash
+        await redis.del(sKey);
+      }
+    }
+
     console.log("DAILY RESET COMPLETE");
 
   }, {
