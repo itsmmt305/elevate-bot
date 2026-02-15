@@ -1,6 +1,6 @@
 
 <div align="center">
-  <img src="elevate-banner.png" alt="Elevate Bot Banner" width="100%">
+  <img src="elevate-banner.jpg" alt="Elevate Bot Banner" width="100%">
   
   <h1 align="center">Elevate Bot</h1>
 
