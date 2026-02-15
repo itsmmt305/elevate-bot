@@ -1,6 +1,6 @@
 
 <div align="center">
-  <img src="https://media.discordapp.net/attachments/1063630659796840469/1151676643264626778/elevate_banner.png" alt="Elevate Bot Banner" width="100%">
+  <img src="elevate-banner.png" alt="Elevate Bot Banner" width="100%">
   
   <h1 align="center">Elevate Bot</h1>
 
