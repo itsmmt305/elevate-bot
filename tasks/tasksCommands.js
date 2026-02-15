@@ -86,8 +86,8 @@ async function handleTaskCommand(message) {
       list += "_No tasks recorded today._";
     } else {
       tasks.forEach((t, i) => {
-        const mark = t.done ? "✅ " : "";
-        list += `${i + 1}. ${mark}${t.text}\n`;
+        const mark = t.done ? " ✅" : "";
+        list += `${i + 1}. ${t.text}${mark}\n`;
       });
     }
 
