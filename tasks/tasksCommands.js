@@ -135,7 +135,7 @@ async function handleTaskCommand(message) {
       list += "_No tasks recorded today._\n";
     } else {
       tasks.forEach((t, i) => {
-        const mark = t.done ? " ✅" : "⬜";
+        const mark = t.done ? " ✅" : " ⬜";
         const origin = t.stashed ? " ↩️" : ""; // Symbol indicating carried over
         list += `${i + 1}. ${t.text}${mark}${origin}\n`;
       });
