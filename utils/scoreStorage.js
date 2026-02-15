@@ -52,7 +52,8 @@ async function resetUser(userId) {
 
   await redis.del(`tasks:${userId}:${date}`);
   await redis.del(`score:${userId}:${date}`);
-  await redis.del(`stash:${userId}:${date}`);
+  await redis.del(`stash:${userId}`);
+  await redis.del(`checkout:${userId}:${date}`);
   await redis.del(`streak:${userId}`);
 }
 

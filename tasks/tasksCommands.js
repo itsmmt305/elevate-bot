@@ -1,4 +1,5 @@
 const { addTask, getTasks, removeTask, completeTask, startStashTask, getStashedTasks } = require('../utils/taskStorage');
+const { Redis } = require("@upstash/redis");
 const { getScore, getStreak, resetUser, setStreak, setScore } = require('../utils/scoreStorage'); // Ensure setScore/setStreak exported if needed for hard reset (resetUser handles generic, but let's see)
 const { processDailyStats, isCheckedOut } = require('../utils/statsProcessor');
 const { getISTDateKey } = require('../utils/dateHelper');
