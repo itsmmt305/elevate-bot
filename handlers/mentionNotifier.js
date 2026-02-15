@@ -10,6 +10,9 @@ async function notifyMentionedUsers(message) {
 
   let content = message.content?.trim();
 
+  // Ignore pull commands (handled by accountability check)
+  if (content && content.startsWith("!pull")) return;
+
   if (!content && message.attachments.size > 0)
     content = "[Attachment sent]";
 
@@ -38,12 +41,12 @@ async function notifyMentionedUsers(message) {
       if (mentionedMember.roles.cache.has(memberRole.id)) continue;
 
       await user.send(
-`📣 ${message.author.username} calls upon you in #${message.channel.name}
+        `📣 ${message.author.username} calls upon you in #${message.channel.name}
 
 \`${content}\``
       );
 
-    } catch {}
+    } catch { }
   }
 }
 

@@ -2,7 +2,7 @@ const { addTask, getTasks, removeTask, completeTask, startStashTask, getStashedT
 const { getScore, getStreak, resetUser, setStreak, setScore } = require('../utils/scoreStorage'); // Ensure setScore/setStreak exported if needed for hard reset (resetUser handles generic, but let's see)
 const { processDailyStats, isCheckedOut } = require('../utils/statsProcessor');
 const { getISTDateKey } = require('../utils/dateHelper');
-const { Redis } = require("@upstash/redis"); // Needed for checking out reset? Or just use helper functions
+const config = require('../config');
 
 async function handleTaskCommand(message) {
 
@@ -84,6 +84,24 @@ async function handleTaskCommand(message) {
 
     let target = message.mentions.users.first() || message.author;
     const targetId = target.id;
+
+    // ACCOUNTABILITY CHECK
+    // If pulling someone else's list
+    if (targetId !== userId) {
+      try {
+        const member = await guild.members.fetch(targetId);
+        const memberRole = guild.roles.cache.find(r => r.name === config.MEMBER_ROLE);
+
+        // If role exists and user doesn't have it -> Logged Out
+        if (memberRole && !member.roles.cache.has(memberRole.id)) {
+          await target.send("🚨 ACCOUNTABILITY CHECK").catch(() => {
+            message.channel.send(`(Could not DM ${target.username} for accountability check)`);
+          });
+        }
+      } catch (e) {
+        console.error("Accountability check failed:", e);
+      }
+    }
 
     const tasks = await getTasks(targetId);
     const stashed = await getStashedTasks(targetId);
