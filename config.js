@@ -8,7 +8,7 @@ module.exports = {
   PANEL_FILE: "./panel.json",
   TIMEOUT: 15 * 60 * 1000, // 15 minutes -> in milliseconds
   BOT_NAME: "elevate#5504",
+  PLANNING_CHANNEL: "🗓️-session-planning",
   COMMAND_CHANNEL: "🤖-bot-commands",
   GRILL_CHANNEL: "🚨-grilling-area",
-  SESSION_PROGRESS_CHANNEL: "✅-session-progress"
 };

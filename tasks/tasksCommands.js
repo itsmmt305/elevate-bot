@@ -30,12 +30,69 @@ async function handleTaskCommand(message) {
     return message.reply(`✅ Checkout complete! Streak: **${stats.currentStreak}**. See summary in session-progress.`);
   }
 
+
   /* COMMIT */
   if (command === "commit") {
     const dateKey = getISTDateKey();
 
     if (await isCheckedOut(userId, dateKey)) {
       return message.reply("Take some rest, come back tomorrow.");
+    }
+
+    // --signoff CHECK
+    if (args.includes("--signoff")) {
+      const redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      });
+
+      const signoffKey = `signoff:${userId}:${dateKey}`;
+      const hasSignedOff = await redis.get(signoffKey);
+
+      if (hasSignedOff) {
+        return message.reply("changes shall show at checkout, in the ✅-session-progress channel");
+      }
+
+      // Mark as signed off
+      await redis.set(signoffKey, "true", { ex: 24 * 60 * 60 }); // 24h expiry
+
+      // Generate list (reuse pull logic)
+      const tasks = await getTasks(userId);
+      const stashed = await getStashedTasks(userId);
+      const score = await getScore(userId);
+      const streak = await getStreak(userId);
+
+      let list = `📋 **${message.author.username}'s Tasks**\n`;
+      list += `⭐ Score: **${score}**\n`;
+      list += `🔥 Streak: **${streak} days**\n\n`;
+
+      if (tasks.length === 0) {
+        list += "_No tasks recorded today._\n";
+      } else {
+        tasks.forEach((t, i) => {
+          const mark = t.done ? " ✅" : " ⬜";
+          const origin = t.stashed ? " ↩️" : "";
+          list += `${mark} ${i + 1}. ${t.text}${origin}\n`;
+        });
+      }
+
+      if (stashed.length > 0) {
+        list += `\n📦 **Stashed (Up Next):**\n`;
+        stashed.forEach((t, i) => {
+          list += `• ${t.text}\n`;
+        });
+      }
+
+      // Send to PLANNING_CHANNEL
+      const planningChannelName = config.PLANNING_CHANNEL;
+      const planningChannel = guild.channels.cache.find(c => c.name === planningChannelName);
+
+      if (planningChannel) {
+        await planningChannel.send(list);
+        return message.reply(`✅ Signed off for the day! List posted in ${planningChannel}.`);
+      } else {
+        return message.reply("⚠️ Planning channel not found in config or server.");
+      }
     }
 
     const text = args.join(" ");
@@ -137,7 +194,7 @@ async function handleTaskCommand(message) {
       tasks.forEach((t, i) => {
         const mark = t.done ? " ✅" : " ⬜";
         const origin = t.stashed ? " ↩️" : ""; // Symbol indicating carried over
-        list += `${i + 1}. ${t.text}${mark}${origin}\n`;
+        list += `${mark} ${i + 1}. ${t.text}${origin}\n`;
       });
     }
 
@@ -177,6 +234,8 @@ async function handleTaskCommand(message) {
       // Also clear checkout flag for today
       const dateKey = getISTDateKey();
       await redis.del(`checkout:${target.id}:${dateKey}`);
+      // Also clear signoff flag for today
+      await redis.del(`signoff:${target.id}:${dateKey}`);
 
       return message.reply(`☢️ HARD reset complete for ${target.username}.`);
     } else if (isSoft) {
@@ -188,6 +247,7 @@ async function handleTaskCommand(message) {
       });
       await redis.del(`tasks:${target.id}:${dateKey}`);
       await redis.del(`checkout:${target.id}:${dateKey}`);
+      await redis.del(`signoff:${target.id}:${dateKey}`);
 
       return message.reply(`🧹 SOFT reset (today only) complete for ${target.username}.`);
     } else {
