@@ -13,6 +13,24 @@ async function handleTaskCommand(message) {
   const userId = message.author.id;
   const guild = message.guild;
 
+  // 1. Identify Command
+  // "checkout", "commit", etc. are already parsed into `command`
+
+  // 2. Exception: !pull works everywhere
+  const isPull = command === "pull";
+
+  // 3. Channel Check
+  const commandChannelName = config.COMMAND_CHANNEL;
+  const isCommandChannel = message.channel.name === commandChannelName;
+
+  if (!isPull && !isCommandChannel) {
+    // If channel exists, mention it. Only reply if we can find it or just use name.
+    const cmdChannel = guild.channels.cache.find(c => c.name === commandChannelName);
+    const mention = cmdChannel ? cmdChannel.toString() : `#${commandChannelName}`;
+
+    return message.reply(`Wrong channel. Please use ${mention} for bot commands (except \`!pull\`).`);
+  }
+
   /* CHECKOUT */
   if (command === "checkout") {
     const dateKey = getISTDateKey();
