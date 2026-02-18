@@ -1,6 +1,7 @@
 const config = require('../config');
 const { Redis } = require("@upstash/redis");
-const { incrementStreak, resetStreak, getStreak, getScore, setScore } = require('./scoreStorage');
+const { incrementStreak, resetStreak, getStreak, getScore, setScore, setStreak } = require('./scoreStorage');
+const { getNextDateKey } = require('./dateHelper');
 
 const redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
@@ -16,30 +17,18 @@ async function isCheckedOut(userId, dateKey) {
     return !!meta;
 }
 
-async function processDailyStats(guild, user, tasks, dateKey) {
-    // 1. Calculate stats
+// Unified checkout processing logic
+async function processDailyCheckout(guild, user, tasks, dateKey) {
+    // 1. Calculate stats logic
     const total = tasks.length;
-    const completed = tasks.filter(t => t.done).length;
+    let completed = 0;
 
-    // 2. Update Streak & Score
-    // Streak logic: Increment ONLY if at least one task is completed.
-
-    if (completed > 0) {
-        await incrementStreak(user.id);
-    } else {
-        // No completed tasks -> Streak reset
-        await resetStreak(user.id);
-    }
-
-    // Scoring Logic
-    // +20 for each completed (fresh)
-    // +10 for each completed (stashed)
-    // -5 for each uncompleted
-
+    // Score Calculation
     let dailyScoreChange = 0;
 
     tasks.forEach(t => {
         if (t.done) {
+            completed++;
             if (t.stashed) dailyScoreChange += 10;
             else dailyScoreChange += 20;
         } else {
@@ -47,17 +36,49 @@ async function processDailyStats(guild, user, tasks, dateKey) {
         }
     });
 
-    // Get current score and apply change
+    // 2. Update Streak
+    // Increment ONLY if at least one task is completed.
+    if (completed > 0) {
+        await incrementStreak(user.id);
+    } else {
+        // No completed tasks -> Streak reset
+        await resetStreak(user.id);
+    }
+
+    // 3. Update Score (Persistent)
     let currentScore = await getScore(user.id);
     currentScore += dailyScoreChange;
     await setScore(user.id, currentScore);
 
+    // 4. Store Score Delta (for Soft Reset reversion)
+    const deltaKey = `daily_score_delta:${user.id}:${dateKey}`;
+    await redis.set(deltaKey, dailyScoreChange);
+
     const currentStreak = await getStreak(user.id);
 
-    // 3. Mark as checked out
+    // 5. Mark as checked out
     await redis.set(getCheckoutKey(user.id, dateKey), "true");
 
-    // 4. Send Summary to Channel
+    // 6. Handle Stashed Tasks (Move current stash to NEXT DAY)
+    const nextDateKey = getNextDateKey(dateKey);
+    const stashKey = `stash:${user.id}`;
+    const stash = await redis.get(stashKey);
+
+    if (stash && stash.length > 0) {
+        const nextTasksKey = `tasks:${user.id}:${nextDateKey}`;
+        const nextTasks = await redis.get(nextTasksKey) || [];
+
+        stash.forEach(t => {
+            t.stashed = true; // Mark as carried over
+            t.done = false;   // Reset status
+            nextTasks.push(t);
+        });
+
+        await redis.set(nextTasksKey, nextTasks);
+        await redis.del(stashKey); // Clear stash after moving
+    }
+
+    // 7. Send Summary to Channel
     const progressChannel = guild.channels.cache.find(
         ch => ch.name === config.SESSION_PROGRESS_CHANNEL && ch.isTextBased()
     );
@@ -72,7 +93,8 @@ async function processDailyStats(guild, user, tasks, dateKey) {
             msg += "**Tasks:**\n";
             tasks.forEach((t, i) => {
                 const icon = t.done ? "✅" : "⬜";
-                msg += `${icon} ${i + 1}. ${t.text}\n`;
+                const stashIcon = t.stashed ? " ↩️" : "";
+                msg += `${icon} ${i + 1}. ${t.text}${stashIcon}\n`;
             });
         } else {
             msg += "_No tasks tracked today._";
@@ -83,7 +105,11 @@ async function processDailyStats(guild, user, tasks, dateKey) {
         console.log(`Channel ${config.SESSION_PROGRESS_CHANNEL} not found.`);
     }
 
+    // 8. Cleanup Current Day's Tasks (Save space)
+    const currentTasksKey = `tasks:${user.id}:${dateKey}`;
+    await redis.del(currentTasksKey);
+
     return { completed, total, currentStreak, currentScore };
 }
 
-module.exports = { processDailyStats, isCheckedOut };
+module.exports = { processDailyCheckout, isCheckedOut };

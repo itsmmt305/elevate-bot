@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const { Redis } = require("@upstash/redis");
 const { getISTDateKey } = require('../utils/dateHelper');
-const { processDailyStats } = require('../utils/statsProcessor');
+const { processDailyCheckout } = require('../utils/statsProcessor');
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -42,9 +42,11 @@ function startDailyReset(client) {
 
         if (isCheckedOut) {
           console.log(`User ${userId} already checked out. Clearing data.`);
-          // Just clear the data
+          // Just clear the date-specific data to save space
+          // Persistent scores/streaks are already safe.
           await redis.del(key);
           await redis.del(checkoutKey);
+          await redis.del(`daily_score_delta:${userId}:${yesterday}`); // Also clear delta
         } else {
           console.log(`User ${userId} did NOT check out. Auto-processing.`);
 
@@ -52,7 +54,6 @@ function startDailyReset(client) {
           const tasks = await redis.get(key) || [];
 
           // Try to find user and guild to report
-          // We'll iterate guilds to find where the user is present and where the channel exists
           let user = null;
           try {
             user = await client.users.fetch(userId);
@@ -61,25 +62,19 @@ function startDailyReset(client) {
             continue;
           }
 
-          // We assume the bot might be in multiple guilds, but we only need to post in one?
-          // Or all common guilds? Let's try to post in any guild that has the stats channel.
+          // Process in the first guild where user is found
           for (const guild of client.guilds.cache.values()) {
             try {
               const member = await guild.members.fetch(userId).catch(() => null);
               if (member) {
-                await processDailyStats(guild, user, tasks, yesterday);
-                // If we assume one main server, we could break here.
-                // But to be safe, we can continue or break. 
-                // Let's break to avoid duplicate spam if they are in multiple servers with the bot.
+                // This will: update stats, move stash to Today, send report, clear Yesterday's tasks
+                await processDailyCheckout(guild, user, tasks, yesterday);
                 break;
               }
             } catch (err) {
               console.error(`Error processing guild ${guild.id} for user ${userId}`, err);
             }
           }
-
-          // Clear tasks
-          await redis.del(key);
         }
 
       } catch (err) {
@@ -87,7 +82,11 @@ function startDailyReset(client) {
       }
     }
 
-    // PART 2: PROCESS STASHED TASKS (Bring them to Today)
+    // PART 2: STASH SWEEP
+    // processDailyCheckout (if called above) moved stash to Today.
+    // However, if users checked out early (e.g. 8pm) and then stashed more items after checkout,
+    // those items are still in `stash:{userId}`. We need to move them to Today.
+
     const today = getISTDateKey(); // This is now 7am+ -> Today
     const stashKeys = await redis.keys("stash:*");
 
@@ -96,22 +95,18 @@ function startDailyReset(client) {
       const stash = await redis.get(sKey);
 
       if (stash && stash.length > 0) {
-        console.log(`Unstashing ${stash.length} tasks for ${userId}`);
+        console.log(`Unstashing ${stash.length} tasks for ${userId} (Sweep)`);
 
-        // Get current tasks (should be empty if reset just happened, but just in case)
         const currentTasksKey = `tasks:${userId}:${today}`;
         const currentTasks = await redis.get(currentTasksKey) || [];
 
-        // Add stashed tasks with stashed=true flag
         stash.forEach(t => {
-          t.stashed = true; // Mark as carried over
-          t.done = false;   // Ensure they are not done
+          t.stashed = true;
+          t.done = false;
           currentTasks.push(t);
         });
 
         await redis.set(currentTasksKey, currentTasks);
-
-        // Clear stash
         await redis.del(sKey);
       }
     }

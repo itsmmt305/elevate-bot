@@ -9,7 +9,7 @@ const redis = new Redis({
 /* ---------------- SCORE ---------------- */
 
 function scoreKey(userId) {
-  return `score:${userId}:${getISTDateKey()}`;
+  return `score:${userId}`;
 }
 
 async function getScore(userId) {

@@ -1,7 +1,7 @@
 const { addTask, getTasks, removeTask, completeTask, startStashTask, getStashedTasks, revertTask, dropStash } = require('../utils/taskStorage');
 const { Redis } = require("@upstash/redis");
 const { getScore, getStreak, resetUser, setStreak, setScore } = require('../utils/scoreStorage'); // Ensure setScore/setStreak exported if needed for hard reset (resetUser handles generic, but let's see)
-const { processDailyStats, isCheckedOut } = require('../utils/statsProcessor');
+const { processDailyCheckout, isCheckedOut } = require('../utils/statsProcessor');
 const { getISTDateKey } = require('../utils/dateHelper');
 const config = require('../config');
 
@@ -24,8 +24,9 @@ async function handleTaskCommand(message) {
 
     const tasks = await getTasks(userId);
 
-    // Process stats (updates streak, sends summary)
-    const stats = await processDailyStats(guild, message.author, tasks, dateKey);
+    // Process stats (updates streak, sends summary, clears tasks, moves stash)
+    // Now using processDailyCheckout instead of processDailyStats
+    const stats = await processDailyCheckout(guild, message.author, tasks, dateKey);
 
     return message.reply(`✅ Checkout complete! Streak: **${stats.currentStreak}**. See summary in session-progress.`);
   }
@@ -236,20 +237,38 @@ async function handleTaskCommand(message) {
       await redis.del(`checkout:${target.id}:${dateKey}`);
       // Also clear signoff flag for today
       await redis.del(`signoff:${target.id}:${dateKey}`);
+      // Also clear score delta
+      await redis.del(`daily_score_delta:${target.id}:${dateKey}`);
 
       return message.reply(`☢️ HARD reset complete for ${target.username}.`);
     } else if (isSoft) {
-      // Daily reset only (tasks + checkout)
+      // Daily reset (tasks + checkout) + Score Reversion
       const dateKey = getISTDateKey();
       const redis = new Redis({
         url: process.env.UPSTASH_REDIS_REST_URL,
         token: process.env.UPSTASH_REDIS_REST_TOKEN,
       });
-      await redis.del(`tasks:${target.id}:${dateKey}`);
-      await redis.del(`checkout:${target.id}:${dateKey}`);
-      await redis.del(`signoff:${target.id}:${dateKey}`);
 
-      return message.reply(`🧹 SOFT reset (today only) complete for ${target.username}.`);
+      // CHECK IF ALREADY CHECKED OUT
+      if (await isCheckedOut(target.id, dateKey)) {
+        const deltaKey = `daily_score_delta:${target.id}:${dateKey}`;
+        const delta = await redis.get(deltaKey);
+
+        if (delta) {
+          const currentScore = await getScore(target.id);
+          const newScore = currentScore - parseInt(delta);
+          await setScore(target.id, newScore);
+
+          await redis.del(deltaKey);
+        }
+        await redis.del(`checkout:${target.id}:${dateKey}`);
+      }
+
+      await redis.del(`tasks:${target.id}:${dateKey}`);
+      await redis.del(`signoff:${target.id}:${dateKey}`);
+      await redis.del(`stash:${target.id}`);
+
+      return message.reply(`🧹 SOFT reset (score reverted if checked out) complete for ${target.username}.`);
     } else {
       return message.reply("Please specify `--hard` (full wipe) or `--soft` (today's tasks only).");
     }

@@ -14,4 +14,10 @@ function getISTDateKey() {
   return ist.toISOString().split("T")[0];
 }
 
-module.exports = { getISTDateKey };
+function getNextDateKey(currentDateKey) {
+  const date = new Date(currentDateKey);
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().split("T")[0];
+}
+
+module.exports = { getISTDateKey, getNextDateKey };
