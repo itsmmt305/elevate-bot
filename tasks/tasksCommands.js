@@ -28,7 +28,17 @@ async function handleTaskCommand(message) {
     const cmdChannel = guild.channels.cache.find(c => c.name === commandChannelName);
     const mention = cmdChannel ? cmdChannel.toString() : `#${commandChannelName}`;
 
-    return message.reply(`Wrong channel. Please use ${mention} for bot commands (except \`!pull\`).`);
+    // Send warning logic
+    message.reply(`Please use ${mention}.`)
+      .then(replyMsg => {
+        // Delete both messages after 10 seconds
+        setTimeout(() => {
+          replyMsg.delete().catch(() => { });
+          message.delete().catch(() => { });
+        }, 10000);
+      });
+
+    return;
   }
 
   /* CHECKOUT */
@@ -46,7 +56,7 @@ async function handleTaskCommand(message) {
     // Now using processDailyCheckout instead of processDailyStats
     const stats = await processDailyCheckout(guild, message.author, tasks, dateKey);
 
-    return message.reply(`✅ Checkout complete! Streak: **${stats.currentStreak}**. See summary in session-progress.`);
+    return message.reply(`✅ Checkout complete! Streak: **${stats.currentStreak}**. See summary in ${config.SESSION_PROGRESS_CHANNEL}.`);
   }
 
 
@@ -69,7 +79,7 @@ async function handleTaskCommand(message) {
       const hasSignedOff = await redis.get(signoffKey);
 
       if (hasSignedOff) {
-        return message.reply("changes shall show at checkout, in the ✅-session-progress channel");
+        return message.reply(`Changes shall show at checkout, in the ${config.SESSION_PROGRESS_CHANNEL} channel`);
       }
 
       // Mark as signed off
