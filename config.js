@@ -11,4 +11,5 @@ module.exports = {
   PLANNING_CHANNEL: "🗓️-session-planning",
   COMMAND_CHANNEL: "🤖-bot-commands",
   GRILL_CHANNEL: "🚨-grilling-area",
+  SESSION_PROGRESS_CHANNEL: "✅-session-progress",
 };
