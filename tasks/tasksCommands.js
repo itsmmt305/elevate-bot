@@ -261,6 +261,13 @@ async function handleTaskCommand(message) {
 
           await redis.del(deltaKey);
         }
+
+        // Decrement streak by 1 since we are reverting checkout
+        const currentStreak = await getStreak(target.id);
+        if (currentStreak > 0) {
+          await setStreak(target.id, currentStreak - 1);
+        }
+
         await redis.del(`checkout:${target.id}:${dateKey}`);
       }
 
