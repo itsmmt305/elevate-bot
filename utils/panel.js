@@ -71,10 +71,10 @@ async function getOrCreatePanel(channel) {
 
   // 3) Send panel message
   const newPanel = await channel.send({
-  content:
-  "# GLORIOUS PURPOSE\n" +
-  "Use the **Sign In** button OR type your password here.\n" +
-  "To leave session anytime: `!logout`\n‎\n",
+    content:
+      "# GLORIOUS PURPOSE\n" +
+      "Use the **Sign In** button OR type your password here.\n" +
+      "To leave session anytime: `!logout`\n‎\n",
     components: [row]
   });
 
@@ -101,4 +101,41 @@ async function getOrCreatePanel(channel) {
   return newPanel;
 }
 
-module.exports = { getOrCreatePanel };
+const fs = require('fs');
+
+/* =========================================================
+   RESET PANEL
+========================================================= */
+
+async function resetPanel(channel) {
+  const guildId = channel.guild.id;
+
+  // 1. Delete Old Message
+  const storedId = await getStoredPanelId(guildId);
+  if (storedId) {
+    try {
+      const msg = await channel.messages.fetch(storedId);
+      if (msg) await msg.delete();
+    } catch (e) {
+      console.log("Could not delete old panel message:", e.message);
+    }
+  }
+
+  // 2. Clear Redis
+  await redis.del(`panel_${guildId}`);
+
+  // 3. Delete panel.json (Using config path)
+  try {
+    if (fs.existsSync(config.PANEL_FILE)) {
+      fs.unlinkSync(config.PANEL_FILE);
+      console.log("Deleted panel.json");
+    }
+  } catch (e) {
+    console.error("Failed to delete panel.json:", e.message);
+  }
+
+  // 4. Create New Panel
+  return await getOrCreatePanel(channel);
+}
+
+module.exports = { getOrCreatePanel, resetPanel };

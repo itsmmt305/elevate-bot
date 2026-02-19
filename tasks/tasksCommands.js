@@ -1,4 +1,5 @@
 const { addTask, getTasks, removeTask, completeTask, startStashTask, getStashedTasks, revertTask, dropStash } = require('../utils/taskStorage');
+const { resetPanel } = require('../utils/panel');
 const { Redis } = require("@upstash/redis");
 const { getScore, getStreak, resetUser, setStreak, setScore } = require('../utils/scoreStorage'); // Ensure setScore/setStreak exported if needed for hard reset (resetUser handles generic, but let's see)
 const { processDailyCheckout, isCheckedOut } = require('../utils/statsProcessor');
@@ -307,6 +308,19 @@ async function handleTaskCommand(message) {
     } else {
       return message.reply("Please specify `--hard` (full wipe) or `--soft` (today's tasks only).");
     }
+  }
+
+  /* PANEL RESET */
+  if (command === "panel-reset") {
+
+    if (!message.member.permissions.has("Administrator"))
+      return message.reply("You are not authorized.");
+
+    const accessChannel = guild.channels.cache.find(c => c.name === config.ACCESS_CHANNEL);
+    if (!accessChannel) return message.reply("Access channel not found.");
+
+    await resetPanel(accessChannel);
+    return message.reply("✅ Panel reset and recreated.");
   }
 }
 
