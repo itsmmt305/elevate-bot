@@ -69,7 +69,7 @@ async function sendGrillMessage(guild, userId, category) {
     }
 
     try {
-        await channel.send(`<@${userId}> ${randomMsg}`);
+        await channel.send(`<@${userId}>\n**${category}**\n${randomMsg}`);
     } catch (e) {
         console.error("Failed to send grill message:", e.message);
     }
