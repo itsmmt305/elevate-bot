@@ -2,13 +2,10 @@
   "opened_app_no_action": [
     "You logged in for accountability and left before it happened.",
     "You visited productivity like a tourist.",
-    "You opened the dashboard, observed the problem, and contributed nothing.",
     "Your presence was noted. Your effort was not.",
     "You inspected your responsibilities and quietly backed away.",
     "You wanted the feeling of productivity, not the work.",
-    "You came here for motivation and ignored instruction.",
     "You monitored your goals like a spectator sport.",
-    "You interacted with the app more than with your tasks."
   ],
   "incomplete_tasks": [
     "The task is still waiting. It has more patience than you have discipline.",
