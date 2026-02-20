@@ -5,26 +5,48 @@ const activityTimers = new Map();
 
 function startActivityTimer(member) {
 
-  if (activityTimers.has(member.id))
-    clearTimeout(activityTimers.get(member.id));
+  const guildId = member.guild.id;
+  const userId = member.id;
+
+  // clear existing timer
+  if (activityTimers.has(userId)) {
+    clearTimeout(activityTimers.get(userId));
+  }
 
   const timer = setTimeout(async () => {
+    try {
 
-    const guild = member.guild;
-    const memberRole = guild.roles.cache.find(r => r.name === config.MEMBER_ROLE);
+      const guild = await member.client.guilds.fetch(guildId);
+      const freshMember = await guild.members.fetch(userId).catch(() => null);
 
-    if (memberRole && member.roles.cache.has(memberRole.id))
-      await member.roles.remove(memberRole);
+      if (!freshMember) {
+        activityTimers.delete(userId);
+        return;
+      }
 
-    try { await member.send("🔒 Logged out due to inactivity."); } catch {}
+      const memberRole = guild.roles.cache.find(
+        r => r.name === config.MEMBER_ROLE
+      );
 
-    await sendLog(guild, `⏰ **${member.user.tag}** logged out (inactivity)`);
+      if (memberRole && freshMember.roles.cache.has(memberRole.id)) {
+        await freshMember.roles.remove(memberRole).catch(() => { });
+      }
 
-    activityTimers.delete(member.id);
+      try {
+        await freshMember.send("🔒 Logged out due to inactivity.");
+      } catch { }
+
+      await sendLog(guild, `⏰ **${freshMember.user.tag}** logged out (inactivity)`);
+
+    } catch (err) {
+      console.error("Activity timer failed:", err);
+    }
+
+    activityTimers.delete(userId);
 
   }, config.TIMEOUT);
 
-  activityTimers.set(member.id, timer);
+  activityTimers.set(userId, timer);
 }
 
 function clearUserTimer(userId) {
