@@ -1,0 +1,80 @@
+{
+  "opened_app_no_action": [
+    "You opened the app just to disappoint me again?",
+    "Amazing. You did absolutely nothing, but with confidence.",
+    "You’re not busy. You’re avoiding.",
+    "Even your excuses need motivation.",
+    "You trained all day — at not starting.",
+    "Elite level scrolling session.",
+    "Incredible commitment… to avoidance.",
+    "I’ve seen idle screens with stronger work ethic.",
+    "You want results with spectator effort.",
+    "I expected little and you still underdelivered."
+  ],
+  "incomplete_tasks": [
+    "You had one job. You negotiated with gravity instead.",
+    "The work isn’t hard. Beginning is.",
+    "You know exactly what to do. You just won’t.",
+    "You don’t need advice. You need movement.",
+    "You procrastinate like it’s a profession.",
+    "You’re talented at planning, allergic to doing.",
+    "Your discipline is still in beta.",
+    "You didn’t fail. You simply refused to try.",
+    "Comfort owns you.",
+    "Your goals trusted you. That was their mistake."
+  ],
+  "tomorrow_not_done": [
+    "You’re the human version of \"I’ll start tomorrow.\"",
+    "You keep waiting for motivation like it’s a bus.",
+    "Another masterclass in delay.",
+    "Peak performance — in postponing.",
+    "You really protected your comfort today.",
+    "You’ve optimized effort out of existence.",
+    "Consistency saw you coming and took a detour.",
+    "You negotiated with comfort and lost to it.",
+    "Your future self keeps blocking your number.",
+    "Your goals are officially a fantasy until proven otherwise."
+  ],
+  "streak_missed": [
+    "Coincidence. I’ll allow it.",
+    "You rest like you’ve overworked. You haven’t.",
+    "Your phone battery worked harder than you today.",
+    "Your to-do list fears you for all the wrong reasons.",
+    "You’re afraid of starting, not incapable.",
+    "You don’t lack time. You lack decisions.",
+    "You’re not tired. You’re undisciplined.",
+    "Pattern detected: avoidance.",
+    "You’re not struggling. You’ve chosen not to act."
+  ],
+  "streak_missed_consecutive": [
+    "You’re not trying anymore, are you?",
+    "World-class procrastination technique.",
+    "Your consistency in doing nothing is admirable.",
+    "Olympic gold in hesitation.",
+    "You’ve optimized effort out of existence.",
+    "Your potential filed a missing person report.",
+    "You’re not trying anymore, are you?",
+    "Comfort owns you.",
+    "Your future self keeps blocking your number."
+  ],
+  "no_login": [
+    "Reminder: absence does not count as progress.",
+    "Your goals waited. You didn’t show up.",
+    "You avoided the app the way you avoid effort.",
+    "Motivation didn’t fail you. You never arrived.",
+    "You’re not struggling. You’ve chosen not to act.",
+    "You stopped checking because you knew the answer.",
+    "Your future self keeps blocking your number.",
+    "Your goals are officially a fantasy until proven otherwise."
+  ],
+  "frequent_task_removal": [
+    "Deleting tasks doesn’t delete responsibility.",
+    "You removed the task, not the expectation.",
+    "Avoidance with extra steps detected.",
+    "You’re negotiating with reality. Reality isn’t negotiating back.",
+    "You don’t lack time. You lack decisions.",
+    "Consistency saw you coming and took a detour.",
+    "You didn’t fail. You simply refused to try.",
+    "Your goals trusted you. That was their mistake."
+  ]
+}

@@ -111,6 +111,48 @@ function startDailyReset(client) {
       }
     }
 
+    // PART 3: GRILL CHECKS
+    // Check for "No Login" (Users who didn't checkout and had no tasks processed)
+    // We can rely on: If they had tasks key -> we processed -> auto-checkout -> `processDailyCheckout` called.
+    // If they checked out manually -> `processDailyCheckout` called.
+    // So if `checkout:{userId}:{yesterday}` is missing, they did nothing at all (no tasks, no stash sweep, no checkout).
+
+    // We iterate known players via streak keys
+    const streamKeys = await redis.keys("streak:*");
+    const { setGrillFlag, checkAndGrill, FLAGS } = require('../utils/grillManager');
+
+    for (const sk of streamKeys) {
+      const userId = sk.split(":")[1];
+
+      // Check if they checked out yesterday
+      const coKey = `checkout:${userId}:${yesterday}`;
+      const hasCheckout = await redis.get(coKey);
+
+      if (!hasCheckout) {
+        // Didn't checkout.
+        // If they had tasks, step 1 would have auto-processed them and set checkout key.
+        // So here means: No Tasks Key AND No Manual Checkout. -> No Login / No Action.
+        await setGrillFlag(userId, FLAGS.NO_LOGIN);
+      }
+
+      // Streak Recurrence (Sticky Flag)
+      // "keep a flag... and do not reset this until one task pushed... keep insulting each day"
+      // We use checkAndGrill with clear=false.
+
+      try {
+        // Find user in any guild to send message
+        for (const guild of client.guilds.cache.values()) {
+          const member = await guild.members.fetch(userId).catch(() => null);
+          if (member) {
+            await checkAndGrill(guild, userId, FLAGS.STREAK_MISSED, false);
+            break;
+          }
+        }
+      } catch (e) {
+        console.error(`Grill recurrence failed for ${userId}`, e);
+      }
+    }
+
     console.log("DAILY RESET COMPLETE");
 
   }, {

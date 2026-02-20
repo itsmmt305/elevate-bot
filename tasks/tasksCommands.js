@@ -5,6 +5,12 @@ const { getScore, getStreak, resetUser, setStreak, setScore } = require('../util
 const { processDailyCheckout, isCheckedOut } = require('../utils/statsProcessor');
 const { getISTDateKey } = require('../utils/dateHelper');
 const config = require('../config');
+const {
+  setSessionActivity,
+  trackTaskRemoval,
+  clearGrillFlag,
+  FLAGS
+} = require('../utils/grillManager');
 
 async function handleTaskCommand(message) {
 
@@ -63,6 +69,8 @@ async function handleTaskCommand(message) {
 
   /* COMMIT */
   if (command === "commit") {
+    await setSessionActivity(userId); // Activity Hook
+
     const dateKey = getISTDateKey();
 
     if (await isCheckedOut(userId, dateKey)) {
@@ -129,11 +137,13 @@ async function handleTaskCommand(message) {
     if (!text) return message.reply("Provide a task.");
 
     await addTask(userId, text);
+    // !commit defines activity
     return message.reply(`Task added: ${text}`);
   }
 
   /* PUSH */
   if (command === "push") {
+    await setSessionActivity(userId); // Activity Hook
 
     const index = parseInt(args[0]) - 1;
     if (isNaN(index)) return message.reply("Provide a valid task number.");
@@ -141,11 +151,16 @@ async function handleTaskCommand(message) {
     const success = await completeTask(userId, index);
     if (!success) return message.reply("Task not found.");
 
+    // Streak Repair Hook
+    await clearGrillFlag(userId, FLAGS.STREAK_MISSED);
+
     return message.reply("✅ Task marked complete.");
   }
 
   /* REVERT */
   if (command === "revert") {
+    await setSessionActivity(userId);
+
     const index = parseInt(args[0]) - 1;
     if (isNaN(index)) return message.reply("Provide a valid task number.");
 
@@ -157,6 +172,7 @@ async function handleTaskCommand(message) {
 
   /* STASH */
   if (command === "stash") {
+    await setSessionActivity(userId); // Activity Hook
 
     if (args.includes("--drop")) {
       const droppedCount = await dropStash(userId);
@@ -175,12 +191,16 @@ async function handleTaskCommand(message) {
 
   /* REMOVE */
   if (command === "rm") {
+    await setSessionActivity(userId); // Activity Hook
 
     const index = parseInt(args[0]) - 1;
     if (isNaN(index)) return message.reply("Provide a valid task number.");
 
     const success = await removeTask(userId, index);
     if (!success) return message.reply("Task not found.");
+
+    // Grill Hook
+    await trackTaskRemoval(guild, userId);
 
     return message.reply("Task removed.");
   }

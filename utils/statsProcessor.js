@@ -109,6 +109,26 @@ async function processDailyCheckout(guild, user, tasks, dateKey) {
     const currentTasksKey = `tasks:${user.id}:${dateKey}`;
     await redis.del(currentTasksKey);
 
+    // --- GRILL FLAGS ---
+    const { setGrillFlag, FLAGS } = require('./grillManager');
+
+    // Flag: Incomplete Tasks
+    const hasIncomplete = tasks.some(t => !t.done && !t.stashed);
+    if (hasIncomplete) {
+        await setGrillFlag(user.id, FLAGS.INCOMPLETE_TASKS);
+    }
+
+    // Flag: Stashed and not Done (Tomorrow Not Done/Stashed Items)
+    const hasStashed = tasks.some(t => t.stashed);
+    if (hasStashed) {
+        await setGrillFlag(user.id, FLAGS.TOMORROW_NOT_DONE);
+    }
+
+    // Flag: Streak Missed
+    if (completed === 0) {
+        await setGrillFlag(user.id, FLAGS.STREAK_MISSED);
+    }
+
     return { completed, total, currentStreak, currentScore };
 }
 
