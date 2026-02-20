@@ -1,82 +1,54 @@
 {
   "opened_app_no_action": [
     "You logged in for accountability and left before it happened.",
-    "You visited productivity like a tourist.",
+    "Visiting productivity like a tourist ain't gone help.",
     "Your presence was noted. Your effort was not.",
     "You inspected your responsibilities and quietly backed away.",
     "You wanted the feeling of productivity, not the work.",
-    "You monitored your goals like a spectator sport.",
+    "Great job monitoring your goals like a spectator sport."
   ],
   "incomplete_tasks": [
     "The task is still waiting. It has more patience than you have discipline.",
-    "You postponed effort but expected progress.",
     "Half-starting things is your most consistent habit.",
     "You keep beginning tasks the way trailers begin movies — no release date.",
     "You prepared perfectly to not execute.",
     "The checklist exists. Completion does not.",
-    "You made a plan and then negotiated against it.",
-    "You approached the work and chose comfort instead.",
     "You invested energy into avoiding a smaller amount of energy.",
     "You treat commitments like suggestions."
   ],
   "tomorrow_not_done": [
     "Tomorrow has carried your responsibilities for a long time.",
-    "You delegated your life to a date that never arrives.",
     "You trust future-you with tasks present-you refuses to touch.",
-    "Tomorrow is now yesterday. The result is the same.",
-    "Your schedule is optimistic. Your actions are not.",
-    "You keep moving the deadline like it offended you.",
-    "You reschedule effort more reliably than you perform it.",
-    "You planned a better day instead of creating one.",
-    "You keep promising improvement to a calendar.",
-    "You believe time passing equals progress."
+    "Tomorrow is now yesterday. Result remain the same.",
+    "Your schedule is optimistic. Can't say the same for your actions.",
+    "Keep promising improvement to a calendar.",
+    "Time passing indeed equals progress."
   ],
   "streak_missed": [
     "Consistency ended quietly.",
     "You paused long enough to become comfortable stopping.",
-    "One day off became a decision.",
-    "You broke routine faster than you built it.",
-    "You remembered the goal after skipping it.",
     "The system worked. Participation did not.",
-    "You lost momentum and made no attempt to recover it.",
-    "Your habit depended entirely on mood.",
     "You expected discipline to maintain itself.",
-    "You treated a routine like an option."
   ],
   "streak_missed_consecutive": [
-    "This is no longer a mistake. It is a pattern.",
     "You didn’t fall off track. You walked away from it.",
-    "The habit stopped. You did not restart it.",
+    "The habit gave up on awaiting your return.",
     "You abandoned consistency before it could help you.",
-    "You now rely on intention instead of action.",
-    "You keep restarting mentally, never behaviorally.",
-    "You remember the goal only when it’s too late for the day.",
     "At this point you are maintaining avoidance, not a routine.",
-    "You are planning a comeback you never schedule.",
+    "Are you even planning a comeback?.",
     "The effort gap is now measurable."
   ],
   "no_login": [
     "Avoiding the tracker does not reset the behavior.",
     "You stopped checking because the data was honest.",
-    "Silence from you does not equal progress.",
-    "You ignored the reminder and hoped the outcome would differ.",
     "You removed observation instead of fixing action.",
-    "You knew what you would see and chose not to see it.",
-    "You avoided measurement to protect comfort.",
-    "You paused accountability, not time.",
-    "Your goals existed today. You did not engage with them.",
     "Absence is also a decision."
   ],
   "frequent_task_removal": [
-    "You manage the list more than the work.",
     "You edited commitments instead of honoring them.",
     "You are organizing avoidance very efficiently.",
-    "You remove tasks the moment they become real.",
-    "You maintain a cleaner list, not a better day.",
-    "You solved the reminder, not the responsibility.",
-    "You keep optimizing the system to avoid execution.",
+    "Keep optimizing the system to avoid execution.",
     "You reduce obligations without reducing consequences.",
-    "You curate tasks instead of completing them.",
-    "You control the tracker because you won’t control the behavior."
+    "When you can't control the behavior, you control the tracker."
   ]
 }
