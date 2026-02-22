@@ -39,7 +39,7 @@ async function handleMessage(message) {
       }
 
       await member.roles.remove(memberRole);
-      // clearUserTimer(member.id); // Disabled
+      clearUserTimer(member.id); // Disabled
 
       // Send a temporary confirmation
       const reply = await message.channel.send("🔒 You have been logged out.");
