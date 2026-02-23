@@ -9,6 +9,7 @@ const {
   getSessionActivity,
   clearSessionActivity
 } = require('../utils/grillManager');
+const { startActivityTimer, clearUserTimer } = require('./activityManager');
 
 async function handleMessage(message) {
 
@@ -19,6 +20,11 @@ async function handleMessage(message) {
   const memberRole = guild.roles.cache.find(r => r.name === config.MEMBER_ROLE);
 
   const isAccessChannel = message.channel.name === config.ACCESS_CHANNEL;
+
+  // Track activity out of the gate for any logged in user
+  if (memberRole && member.roles.cache.has(memberRole.id)) {
+    startActivityTimer(member);
+  }
 
   /* =====================================================
      GLOBAL LOGOUT COMMAND (PRIORITY)
@@ -39,7 +45,7 @@ async function handleMessage(message) {
       }
 
       await member.roles.remove(memberRole);
-      clearUserTimer(member.id); // Disabled
+      clearUserTimer(member.id);
 
       // Send a temporary confirmation
       const reply = await message.channel.send("🔒 You have been logged out.");
@@ -91,6 +97,7 @@ async function handleMessage(message) {
         setTimeout(() => confirm.delete().catch(() => { }), 5000);
 
         await sendLog(guild, `🟢 **${member.user.tag}** logged in (text password)`);
+        startActivityTimer(member);
       }
 
       return;
@@ -110,8 +117,6 @@ async function handleMessage(message) {
 
   if (!memberRole) return;
   if (!member.roles.cache.has(memberRole.id)) return;
-
-  // startActivityTimer(member); // disabled
 }
 
 module.exports = { handleMessage };
