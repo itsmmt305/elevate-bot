@@ -11,6 +11,7 @@ const {
   clearGrillFlag,
   FLAGS
 } = require('../utils/grillManager');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 async function handleTaskCommand(message) {
 
@@ -133,6 +134,33 @@ async function handleTaskCommand(message) {
       }
     }
 
+    const mentionedUser = message.mentions.users.first();
+    if (mentionedUser) {
+      let taskText = args.join(" ").replace(/<@!?\d+>/g, "").trim();
+      if (!taskText) return message.reply("Provide a task for the user.");
+
+      const row = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId(`accept_task_${message.author.id}`)
+            .setLabel('Accept')
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId(`decline_task_${message.author.id}`)
+            .setLabel('Decline')
+            .setStyle(ButtonStyle.Danger)
+        );
+
+      await mentionedUser.send({
+        content: `**${message.author.username}** challenged you to a task:\n \`${taskText}\``,
+        components: [row]
+      }).catch(err => {
+        return message.reply(`Could not send DM to **${mentionedUser.username}**.`);
+      });
+
+      return message.reply(`Challenge sent to **${mentionedUser.username}**.`);
+    }
+
     const text = args.join(" ");
     if (!text) return message.reply("Provide a task.");
 
@@ -221,7 +249,7 @@ async function handleTaskCommand(message) {
         // If role exists and user doesn't have it -> Logged Out
         if (memberRole && !member.roles.cache.has(memberRole.id)) {
           await target.send("🚨 ACCOUNTABILITY CHECK").catch(() => {
-            message.channel.send(`(Could not DM ${target.username} for accountability check)`);
+            message.channel.send(`(Could not DM **${target.username}** for accountability check)`);
           });
         }
       } catch (e) {
@@ -289,7 +317,7 @@ async function handleTaskCommand(message) {
       // Also clear score delta
       await redis.del(`daily_score_delta:${target.id}:${dateKey}`);
 
-      return message.reply(`☢️ HARD reset complete for ${target.username}.`);
+      return message.reply(`☢️ HARD reset complete for **${target.username}**.`);
     } else if (isSoft) {
       // Daily reset (tasks + checkout) + Score Reversion
       const dateKey = getISTDateKey();
@@ -324,7 +352,7 @@ async function handleTaskCommand(message) {
       await redis.del(`signoff:${target.id}:${dateKey}`);
       await redis.del(`stash:${target.id}`);
 
-      return message.reply(`🧹 SOFT reset (score reverted if checked out) complete for ${target.username}.`);
+      return message.reply(`🧹 SOFT reset (score reverted if checked out) complete for **${target.username}**.`);
     } else {
       return message.reply("Please specify `--hard` (full wipe) or `--soft` (today's tasks only).");
     }

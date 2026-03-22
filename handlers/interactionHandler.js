@@ -60,6 +60,43 @@ async function handleInteraction(interaction) {
     await interaction.reply({ content: `🟢 ${interaction.user.username} is logged in`, ephemeral: true });
     await sendLog(guild, `🟢 **${interaction.user.tag}** logged in`);
   }
+
+  // Handle cross-user task accept/decline
+  if (interaction.isButton() && interaction.customId.startsWith('accept_task_')) {
+    const authorId = interaction.customId.replace('accept_task_', '');
+    const messageContent = interaction.message.content;
+    const taskText = messageContent.split('\n').slice(1).join('\n');
+
+    const { addTask } = require('../utils/taskStorage');
+    await addTask(interaction.user.id, taskText);
+
+    await interaction.update({
+      content: `${messageContent}\n\n**(Accepted)**`,
+      components: []
+    });
+    return;
+  }
+
+  if (interaction.isButton() && interaction.customId.startsWith('decline_task_')) {
+    const authorId = interaction.customId.replace('decline_task_', '');
+    const messageContent = interaction.message.content;
+    const taskText = messageContent.split('\n').slice(1).join('\n');
+
+    try {
+      const author = await interaction.client.users.fetch(authorId);
+      if (author) {
+        await author.send(`your challenge ${taskText} was rejected by ${interaction.user.username}`);
+      }
+    } catch (e) {
+      console.error("Could not send decline DM to author:", e);
+    }
+
+    await interaction.update({
+      content: `${messageContent}\n\n**(Declined)**`,
+      components: []
+    });
+    return;
+  }
 }
 
 module.exports = { handleInteraction };
